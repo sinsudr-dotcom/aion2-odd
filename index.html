@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AION2 오드 에너지 관리</title>
+<style>
+:root{--bg:#0f1115;--panel:#171a21;--card:#1d212a;--line:#2b303b;--text:#f4f6fa;--muted:#9ca3af;--accent:#8ab4f8;--danger:#ff8a8a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,"Noto Sans KR",sans-serif}
+button,input{font:inherit}button{cursor:pointer}.wrap{max-width:1050px;margin:auto;padding:28px 18px 60px}
+header{display:flex;justify-content:space-between;align-items:end;gap:20px;margin-bottom:22px}.eyebrow{font-size:13px;color:var(--muted);margin-bottom:6px}h1{font-size:28px;margin:0}.header-note{font-size:13px;color:var(--muted);text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.btn-refresh-all{background:var(--accent);color:#101319;border:0;padding:8px 14px;border-radius:10px;font-weight:700;font-size:13px;transition:opacity .2s}.btn-refresh-all:hover{opacity:0.9}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.slot{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;min-height:170px;display:flex;flex-direction:column;justify-content:space-between}.slot.empty{border-style:dashed;align-items:center;justify-content:center;color:var(--muted);cursor:pointer}.slot-top{display:flex;justify-content:space-between;gap:10px;cursor:pointer}.name{font-size:20px;font-weight:700}.total{font-size:30px;font-weight:800;margin:14px 0 4px;cursor:pointer}.sub{font-size:13px;color:var(--muted)}.mini{display:flex;justify-content:space-between;font-size:13px;margin-top:14px}.bar{height:7px;background:#2a2e37;border-radius:20px;overflow:hidden;margin-top:7px}.fill{height:100%;background:var(--accent);border-radius:20px}.add{margin:20px auto 0;display:block;border:1px solid var(--line);background:var(--panel);color:var(--text);padding:12px 20px;border-radius:12px;font-weight:700}.add:disabled{opacity:.35;cursor:not-allowed}
+
+/* 메인 카드 내 간략 컨트롤 버튼 스타일 */
+.quick-ctrl{margin-top:16px;padding-top:12px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.quick-row{display:flex;align-items:center;gap:6px}
+.quick-label{font-size:12px;color:var(--muted);width:32px;flex-shrink:0}
+.quick-btns{display:flex;gap:5px;flex:1;overflow-x:auto}
+.quick-btns button{flex:1;padding:6px 0;background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:8px;font-size:12px;font-weight:700;white-space:nowrap}
+.quick-btns button:hover{border-color:#555e6e;background:#232733}
+
+.hidden{display:none}.detail{margin-top:20px}.back{background:none;border:0;color:var(--accent);padding:0;margin-bottom:14px}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;margin-bottom:14px}.detail-head{display:flex;justify-content:space-between;align-items:start;gap:15px}.detail-name{font-size:25px;font-weight:800}.updated{font-size:12px;color:var(--muted);text-align:right}.big-total{font-size:46px;font-weight:900;margin:16px 0 20px}.energy-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.energy{background:var(--panel);border-radius:14px;padding:16px}.energy-title{font-weight:700;display:flex;justify-content:space-between}.energy small{display:block;color:var(--muted);margin-top:8px}.actions{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:12px}.actions button{min-height:50px;border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:12px;font-weight:800}.actions button:hover,.add:hover{border-color:#555e6e}.section-title{font-weight:800;margin-bottom:5px}.desc{font-size:13px;color:var(--muted)}.setup{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:15px}.setup label{font-size:13px;color:var(--muted);display:block;margin-bottom:6px}.setup input{width:100%;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:12px}.save{grid-column:1/-1;background:var(--accent)!important;color:#101319!important;border:0!important}.history{margin-top:12px}.history-row{display:flex;justify-content:space-between;gap:15px;padding:12px 0;border-bottom:1px solid var(--line);font-size:14px}.history-row:last-child{border-bottom:0}.positive{color:#9fe2ad}.negative{color:#ffaaaa}.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#252a34;border:1px solid var(--line);padding:11px 16px;border-radius:12px;font-size:14px;display:none;z-index:5}
+@media(max-width:700px){.grid,.energy-grid,.setup{grid-template-columns:1fr}.actions{grid-template-columns:repeat(2,1fr)}header{align-items:start;flex-direction:column}.header-note{text-align:left;align-items:flex-start}.total{font-size:26px}.big-total{font-size:38px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div><div class="eyebrow">AION2</div><h1>오드 에너지 관리</h1></div>
+  <div class="header-note">
+    <span>최대 20캐릭터 · 기본 에너지 우선 소모</span>
+    <button id="refreshAllBtn" class="btn-refresh-all">🔄 전체 갱신</button>
+  </div>
+</header>
+
+<main id="listView">
+  <div id="characterGrid" class="grid"></div>
+  <button id="addBtn" class="add">＋ 캐릭터 추가</button>
+</main>
+
+<main id="detailView" class="detail hidden">
+  <button id="backBtn" class="back">← 캐릭터 목록</button>
+  <section class="card">
+    <div class="detail-head">
+      <div><div class="eyebrow">선택 캐릭터</div><div id="detailName" class="detail-name"></div></div>
+      <div><div class="updated">마지막 기준 시각</div><div id="updated" class="updated"></div></div>
+    </div>
+    <div id="detailTotal" class="big-total">0</div>
+    <div class="energy-grid">
+      <div class="energy">
+        <div class="energy-title"><span>기본 에너지</span><span id="baseText"></span></div>
+        <div class="bar"><div id="baseBar" class="fill"></div></div>
+        <small>3시간마다 +15 · 최대 840</small>
+      </div>
+      <div class="energy">
+        <div class="energy-title"><span>충전 에너지</span><span id="chargeText"></span></div>
+        <div class="bar"><div id="chargeBar" class="fill"></div></div>
+        <small>아이템 충전 · 최대 2,000</small>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="section-title">오드 사용</div><div class="desc">기본 에너지를 먼저 사용합니다.</div>
+    <div class="actions">
+      <button data-use="40">−40</button><button data-use="60">−60</button>
+      <button data-use="120">−120</button><button data-use="160">−160</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="section-title">충전 에너지 추가</div><div class="desc">충전 에너지만 증가합니다.</div>
+    <div class="actions" style="grid-template-columns:1fr 1fr">
+      <button data-add="10">＋10</button><button data-add="40">＋40</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="section-title">현재 에너지 갱신</div>
+    <div class="desc">마지막 기준 시각 이후 3시간 단위로 기본 에너지를 계산합니다.</div>
+    <div class="actions" style="grid-template-columns:1fr">
+      <button id="refreshBtn">현재 에너지 갱신</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="section-title">현재 상태 직접 입력</div>
+    <div class="desc">게임에서 실제 수치를 확인한 경우 새로운 기준값으로 저장합니다.</div>
+    <form id="setupForm" class="setup">
+      <div><label>기본 에너지</label><input id="baseInput" type="number" min="0" max="840"></div>
+      <div><label>충전 에너지</label><input id="chargeInput" type="number" min="0" max="2000"></div>
+      <button class="save" type="submit">현재 상태 저장</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <div class="section-title">최근 기록</div>
+    <div id="history" class="history"></div>
+  </section>
+</main>
+</div>
+<div id="toast" class="toast"></div>
+
+<script>
+const KEY="aion2_odd_manager_v1";
+let data=JSON.parse(localStorage.getItem(KEY)||"null")||{characters:[]};
+let selected=null;
+
+function save(){localStorage.setItem(KEY,JSON.stringify(data))}
+function id(){return crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random()}
+function fmt(n){return Math.round(n).toLocaleString("ko-KR")}
+function dt(s){if(!s)return "미등록";return new Intl.DateTimeFormat("ko-KR",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}).format(new Date(s))}
+function toast(t){const e=document.getElementById("toast");e.textContent=t;e.style.display="block";clearTimeout(window._toast);window._toast=setTimeout(()=>e.style.display="none",1800)}
+function character(){return data.characters.find(c=>c.id===selected)}
+function record(c,label,amount){c.history.push({label,amount,time:new Date().toISOString()});if(c.history.length>100)c.history.shift()}
+
+function consumeEnergy(c, amount){
+  const total = c.base + c.charge;
+  if (total < amount) return false;
+  let remain = amount;
+  const fromBase = Math.min(c.base, remain);
+  c.base -= fromBase;
+  remain -= fromBase;
+  c.charge -= remain;
+  c.lastUpdated = new Date().toISOString();
+  record(c, `오드 사용 −${amount}`, -amount);
+  return true;
+}
+
+function addEnergy(c, amount){
+  const actual = Math.min(amount, 2000 - c.charge);
+  if (actual <= 0) return 0;
+  c.charge += actual;
+  c.lastUpdated = new Date().toISOString();
+  record(c, "충전 에너지 추가", actual);
+  return actual;
+}
+
+function refreshCharacter(c){
+  if(!c.lastUpdated) return 0;
+  const elapsed = Date.now() - new Date(c.lastUpdated).getTime();
+  const cycles = Math.floor(elapsed / (3 * 60 * 60 * 1000));
+  const gain = Math.min(cycles * 15, 840 - c.base);
+  c.base += Math.max(0, gain);
+  c.lastUpdated = new Date().toISOString();
+  if (gain > 0) record(c, "기본 에너지 자동 충전", gain);
+  return gain;
+}
+
+function renderList(){
+ const g=document.getElementById("characterGrid");g.innerHTML="";
+ data.characters.forEach(c=>{
+   const el=document.createElement("div");el.className="slot";el.innerHTML=
+   `<div class="slot-top-area">
+      <div class="slot-top"><span class="name"></span><span class="sub">›</span></div>
+      <div class="total">${fmt(c.base+c.charge)}</div>
+      <div class="sub">총 오드 에너지</div>
+      <div class="mini"><span>기본</span><b>${fmt(c.base)} / 840</b></div>
+      <div class="bar"><div class="fill" style="width:${c.base/840*100}%"></div></div>
+      <div class="mini"><span>충전</span><b>${fmt(c.charge)} / 2,000</b></div>
+      <div class="bar"><div class="fill" style="width:${c.charge/2000*100}%"></div></div>
+    </div>
+    
+    <div class="quick-ctrl">
+      <div class="quick-row">
+        <span class="quick-label">소모</span>
+        <div class="quick-btns">
+          <button data-quick-use="40">-40</button>
+          <button data-quick-use="60">-60</button>
+          <button data-quick-use="120">-120</button>
+          <button data-quick-use="160">-160</button>
+        </div>
+      </div>
+      <div class="quick-row">
+        <span class="quick-label">충전</span>
+        <div class="quick-btns">
+          <button data-quick-add="10">+10</button>
+          <button data-quick-add="40">+40</button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="sub" style="margin-top:10px">기준 ${dt(c.lastUpdated)}</div>`;
+   
+   el.querySelector(".name").textContent=c.name;
+   el.querySelector(".slot-top-area").onclick=()=>openDetail(c.id);
+
+   // 간략 오드 소모 버튼
+   el.querySelectorAll("[data-quick-use]").forEach(btn=>{
+     btn.onclick=(e)=>{
+       e.stopPropagation();
+       const val = Number(btn.dataset.quickUse);
+       if(consumeEnergy(c, val)){
+         save(); renderList(); toast(`${c.name}: ${fmt(val)} 소모`);
+       } else {
+         toast("보유 오드 에너지가 부족합니다.");
+       }
+     };
+   });
+
+   // 간략 충전 버튼
+   el.querySelectorAll("[data-quick-add]").forEach(btn=>{
+     btn.onclick=(e)=>{
+       e.stopPropagation();
+       const val = Number(btn.dataset.quickAdd);
+       const added = addEnergy(c, val);
+       if(added > 0){
+         save(); renderList(); toast(`${c.name}: 충전 +${fmt(added)}`);
+       } else {
+         toast("충전 에너지가 이미 최대(2,000)입니다.");
+       }
+     };
+   });
+
+   g.appendChild(el);
+ });
+ for(let i=data.characters.length;i<4;i++){
+   const el=document.createElement("div");el.className="slot empty";el.textContent="＋ 캐릭터 등록";el.onclick=addCharacter;g.appendChild(el);
+ }
+ document.getElementById("addBtn").disabled=data.characters.length>=20;
+}
+
+function addCharacter(){
+ if(data.characters.length>=20)return;
+ const name=prompt("캐릭터 이름을 입력하세요.");
+ if(!name||!name.trim())return;
+ data.characters.push({id:id(),name:name.trim(),base:0,charge:0,lastUpdated:null,history:[]});
+ save();renderList();toast("캐릭터를 추가했습니다.");
+}
+
+function openDetail(cid){
+ selected=cid;document.getElementById("listView").classList.add("hidden");document.getElementById("detailView").classList.remove("hidden");renderDetail();
+}
+
+function renderDetail(){
+ const c=character();if(!c)return;
+ document.getElementById("detailName").textContent=c.name;
+ document.getElementById("detailTotal").textContent=fmt(c.base+c.charge);
+ document.getElementById("baseText").textContent=`${fmt(c.base)} / 840`;
+ document.getElementById("chargeText").textContent=`${fmt(c.charge)} / 2,000`;
+ document.getElementById("baseBar").style.width=(c.base/840*100)+"%";
+ document.getElementById("chargeBar").style.width=(c.charge/2000*100)+"%";
+ document.getElementById("updated").textContent=dt(c.lastUpdated);
+ document.getElementById("baseInput").value=c.base;
+ document.getElementById("chargeInput").value=c.charge;
+ const h=document.getElementById("history");h.innerHTML="";
+ if(!c.history.length){h.innerHTML='<div class="sub">기록이 없습니다.</div>';return}
+ c.history.slice().reverse().slice(0,20).forEach(x=>{
+   const row=document.createElement("div");row.className="history-row";
+   const left=document.createElement("div");left.innerHTML=`<b></b><div class="sub">${dt(x.time)}</div>`;
+   left.querySelector("b").textContent=x.label;
+   const right=document.createElement("b");right.textContent=(x.amount>0?"+":"")+fmt(x.amount);right.className=x.amount>0?"positive":"negative";
+   row.append(left,right);h.appendChild(row);
+ });
+}
+
+document.getElementById("addBtn").onclick=addCharacter;
+document.getElementById("backBtn").onclick=()=>{selected=null;document.getElementById("detailView").classList.add("hidden");document.getElementById("listView").classList.remove("hidden");renderList()};
+
+// 상단 전체 갱신 버튼
+document.getElementById("refreshAllBtn").onclick=()=>{
+  let updatedCount = 0;
+  data.characters.forEach(c => {
+    if(refreshCharacter(c) > 0) updatedCount++;
+  });
+  save();
+  renderList();
+  toast(updatedCount > 0 ? `${updatedCount}개 캐릭터 에너지 갱신 완료!` : "갱신할 에너지가 없습니다.");
+};
+
+// 상세페이지 오드 소모
+document.querySelectorAll("[data-use]").forEach(b=>b.onclick=()=>{
+ const c=character(), n=Number(b.dataset.use); if(!c)return;
+ if(consumeEnergy(c, n)){
+   save(); renderDetail(); toast(`${fmt(n)} 사용했습니다.`);
+ } else {
+   toast("보유 오드 에너지가 부족합니다.");
+ }
+});
+
+// 상세페이지 오드 충전
+document.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>{
+ const c=character(),n=Number(b.dataset.add);if(!c)return;
+ const added = addEnergy(c, n);
+ if(added > 0){
+   save(); renderDetail(); toast(`충전 에너지 +${fmt(added)}`);
+ } else {
+   toast("충전 에너지가 이미 2,000입니다.");
+ }
+});
+
+// 상세페이지 개별 갱신
+document.getElementById("refreshBtn").onclick=()=>{
+ const c=character();if(!c)return;if(!c.lastUpdated){toast("먼저 현재 상태를 저장하세요.");return}
+ const gain = refreshCharacter(c);
+ save(); renderDetail(); toast(gain > 0 ? `기본 에너지 +${fmt(gain)} 갱신` : "추가 충전 없이 갱신했습니다.");
+};
+
+document.getElementById("setupForm").onsubmit=e=>{
+ e.preventDefault();const c=character();if(!c)return;
+ c.base=Math.max(0,Math.min(840,Number(document.getElementById("baseInput").value)||0));
+ c.charge=Math.max(0,Math.min(2000,Number(document.getElementById("chargeInput").value)||0));
+ c.lastUpdated=new Date().toISOString();record(c,"현재 상태 직접 저장",c.base+c.charge);save();renderDetail();toast("현재 상태를 저장했습니다.");
+};
+
+renderList();
+</script>
+</body>
+</html>
